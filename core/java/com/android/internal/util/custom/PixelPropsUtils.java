@@ -253,7 +253,6 @@ public class PixelPropsUtils {
             if (processName.toLowerCase().contains("unstable")
                     || processName.toLowerCase().contains("pixelmigrate")
                     || processName.toLowerCase().contains("instrumentation")) {
-                sIsGms = true;
 
                 final boolean was = isGmsAddAccountActivityOnTop();
                 final TaskStackListener taskStackListener = new TaskStackListener() {
@@ -275,15 +274,15 @@ public class PixelPropsUtils {
                 if (was) return true;
 
                 dlog("Spoofing build for GMS");
-                // Alter build parameters to pixel for avoiding hardware attestation enforcement
-                setPropValue("PRODUCT", "sailfish");
-                setPropValue("MODEL", "Pixel");
-                setPropValue("DEVICE", "sailfish");
-                setPropValue("FINGERPRINT", "google/sailfish/sailfish:8.1.0/OPM2.171019.029/4657601:user/release-keys");
-                setPropValue("TYPE", "user");
-                setPropValue("TAGS", "release-keys");
-                setVersionField("DEVICE_INITIAL_SDK_INT", Build.VERSION_CODES.O_MR1);
-                setVersionFieldString("SECURITY_PATCH", "2018-04-05");
+                // Alter build parameters to avoid hardware attestation enforcement
+                setPropValue("BRAND", "google");
+                setPropValue("MANUFACTURER", "Google");
+                setBuildField("DEVICE", "husky");
+                setPropValue("ID", "AP31.240617.009");
+                setBuildField("FINGERPRINT", "google/husky_beta/husky:15/AP31.240617.009/12094726:user/release-keys");
+                setBuildField("MODEL", "Pixel 8 Pro");
+                setBuildField("PRODUCT", "husky_beta");
+                setVersionFieldString("SECURITY_PATCH", "2024-07-05");
                 return true;
             }
         }
@@ -430,20 +429,16 @@ public class PixelPropsUtils {
         }
     }
 
-    private static void setVersionField(String key, Object value) {
+    private static void setVersionFieldString(String key, String value) {
         try {
             // Unlock
-            if (DEBUG) Log.d(TAG, "Defining version field " + key + " to " + value.toString());
+            if (DEBUG) Log.d(TAG, "Defining prop " + key + " to " + value);
             Field field = Build.VERSION.class.getDeclaredField(key);
             field.setAccessible(true);
-
-            // Edit
             field.set(null, value);
-
-            // Lock
             field.setAccessible(false);
         } catch (NoSuchFieldException | IllegalAccessException e) {
-            Log.e(TAG, "Failed to set version field " + key, e);
+            Log.e(TAG, "Failed to set prop " + key, e);
         }
     }
 
@@ -485,14 +480,15 @@ public class PixelPropsUtils {
     }
 
     private static boolean isCallerSafetyNet() {
-        return sIsGms && Arrays.stream(Thread.currentThread().getStackTrace())
-                .anyMatch(elem -> elem.getClassName().contains("DroidGuard"));
+        return Arrays.stream(Thread.currentThread().getStackTrace())
+                        .anyMatch(elem -> elem.getClassName().toLowerCase()
+                            .contains("droidguard"));
     }
 
     public static void onEngineGetCertificateChain() {
         // Check stack for SafetyNet or Play Integrity
         if (isCallerSafetyNet() || sIsFinsky) {
-            Log.i(TAG, "Blocked key attestation sIsGms=" + sIsGms + " sIsFinsky=" + sIsFinsky);
+            Log.i(TAG, "Blocked key attestation");
             throw new UnsupportedOperationException();
         }
     }
